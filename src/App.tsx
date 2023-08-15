@@ -13,9 +13,36 @@ import dayjs, { Dayjs } from "dayjs";
 import { TrendingFlat } from "@mui/icons-material";
 
 function App() {
-  const [date, setDate] = React.useState<Dayjs | null>(dayjs());
+  const [departureDate, setDepartureDate] = React.useState<Dayjs | null>(dayjs());
   const [source, setSource] = React.useState<string>("");
   const [destination, setDestination] = React.useState<string>("");
+
+  const getFlightPrices = async () => {
+    console.log("Fetching prices");
+    const date = departureDate?.format("YYYY-MM-DD");
+    console.log("Date: ", date);
+    console.log("Source: ", source);
+    console.log("Destination: ", destination);
+    let flightPriceDetails: any
+    try {
+      const response = await fetch(`http://localhost:8080/prices?source=${source}&destination=${destination}&departureDate=${date}`,{
+      method: "GET",
+      }
+    );
+    const json = await response.json();
+    flightPriceDetails = json
+    console.log("JSON: ", json);
+    } catch (error) {
+      console.error(error)
+      return false
+    }
+    for(const airlineCode in flightPriceDetails){
+      if (flightPriceDetails.hasOwnProperty(airlineCode)) {
+        const price = flightPriceDetails[airlineCode];
+        console.log("airlineCode: ", airlineCode, "price: ", price );
+      }
+    }
+    }
   return (
     <div className="App">
       <LocalizationProvider dateAdapter={AdapterDayjs}>
@@ -60,13 +87,14 @@ function App() {
             <DatePicker
               label="Date"
               format="DD/MM/YYYY"
-              value={date}
-              onChange={(newValue) => setDate(newValue)}
+              value={departureDate}
+              onChange={(newValue) => setDepartureDate(newValue)}
               disablePast
             />
           </CardContent>
           <CardActions>
-            <Button size="large" variant="contained">
+            <Button size="large" variant="contained"
+            onClick={getFlightPrices}>
               Get Prices
             </Button>
           </CardActions>
