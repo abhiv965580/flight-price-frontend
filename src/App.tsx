@@ -13,36 +13,53 @@ import dayjs, { Dayjs } from "dayjs";
 import { TrendingFlat } from "@mui/icons-material";
 
 function App() {
-  const [departureDate, setDepartureDate] = React.useState<Dayjs | null>(dayjs());
+  const [departureDate, setDepartureDate] = React.useState<Dayjs | null>(
+    dayjs()
+  );
   const [source, setSource] = React.useState<string>("");
   const [destination, setDestination] = React.useState<string>("");
+  const [results, setResults] = React.useState<any>();
+
+  async function sleep(ms: number) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  const getIataCode = async (cityName: string) => {
+    try {
+      const response = await fetch(
+        `https://flight-price-backend-qyun.onrender.com/airportCode?cityName=${cityName}`,
+        {
+          method: "GET",
+        }
+      );
+      const json = await response.json();
+      return json;
+    } catch (error) {
+      console.error(error);
+    }
+  };
 
   const getFlightPrices = async () => {
-    console.log("Fetching prices");
+    const display = document.querySelector(".results");
+    display?.setAttribute("style", "display: block");
     const date = departureDate?.format("YYYY-MM-DD");
-    console.log("Date: ", date);
-    console.log("Source: ", source);
-    console.log("Destination: ", destination);
-    let flightPriceDetails: any
+    const sourceIataCode = await getIataCode(source);
+    await sleep(500);
+    const destinationIataCode = await getIataCode(destination);
     try {
-      const response = await fetch(`http://localhost:8080/prices?source=${source}&destination=${destination}&departureDate=${date}`,{
-      method: "GET",
-      }
-    );
-    const json = await response.json();
-    flightPriceDetails = json
-    console.log("JSON: ", json);
+      const response = await fetch(
+        `https://flight-price-backend-qyun.onrender.com/prices?source=${sourceIataCode}&destination=${destinationIataCode}&departureDate=${date}`,
+        {
+          method: "GET",
+        }
+      );
+      const json = await response.json();
+      setResults(json);
     } catch (error) {
-      console.error(error)
-      return false
+      console.error(error);
+      return false;
     }
-    for(const airlineCode in flightPriceDetails){
-      if (flightPriceDetails.hasOwnProperty(airlineCode)) {
-        const price = flightPriceDetails[airlineCode];
-        console.log("airlineCode: ", airlineCode, "price: ", price );
-      }
-    }
-    }
+  };
   return (
     <div className="App">
       <LocalizationProvider dateAdapter={AdapterDayjs}>
@@ -93,11 +110,28 @@ function App() {
             />
           </CardContent>
           <CardActions>
-            <Button size="large" variant="contained"
-            onClick={getFlightPrices}>
+            <Button size="large" variant="contained" onClick={getFlightPrices}>
               Get Prices
             </Button>
           </CardActions>
+          <Card className="results" sx={{ backgroundColor: "#bae6fd" }}>
+            <Typography fontWeight={"bold"} fontSize={22} sx={{ margin: 2 }}>
+              Flight Details:
+            </Typography>
+            <CardContent
+              sx={{ display: "flex", flexDirection: "column", gap: 2 }}
+            >
+              {results ? (
+                Object.keys(results).map((airline) => (
+                  <Typography key={airline}>
+                    {airline} - {results[airline]}
+                  </Typography>
+                ))
+              ) : (
+                <p>Loading...</p>
+              )}
+            </CardContent>
+          </Card>
         </Card>
       </LocalizationProvider>
     </div>
